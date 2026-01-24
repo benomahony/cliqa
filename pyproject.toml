@@ -1,0 +1,17 @@
+[project]
+name = "clint"
+version = "0.1.0"
+description = "Analyze CLI tools against clig.dev guidelines"
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic-ai>=1.47.0",
+    "rich>=14.2.0",
+    "typer>=0.21.1",
+]
+
+[project.scripts]
+clint = "clint.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
