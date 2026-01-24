@@ -4,7 +4,6 @@ from typing import Annotated
 import typer
 from rich.console import Console
 from rich.table import Table
-from rich.panel import Panel
 
 from .models import AnalysisReport, Severity
 from .runner import run_command, command_exists
@@ -16,7 +15,6 @@ from .checks import (
     check_json_output,
     check_stderr_usage,
     check_double_dash,
-    check_stdin_dash,
     check_help_content,
     check_subcommand_help,
     check_quiet_flag,
@@ -37,16 +35,18 @@ app = typer.Typer(
     name="clint",
     help="Analyze CLI tools against clig.dev guidelines",
     no_args_is_help=True,
+    context_settings={"help_option_names": ["-h", "--help"]},
 )
+
+
+def version_callback(value: bool) -> None:
+    if value:
+        from importlib.metadata import version
+        console = Console()
+        console.print(f"clint {version('clint')}")
+        raise typer.Exit()
 console = Console()
 console_err = Console(stderr=True)
-
-SEVERITY_COLORS = {
-    Severity.PASS: "green",
-    Severity.INFO: "blue",
-    Severity.WARNING: "yellow",
-    Severity.ERROR: "red",
-}
 
 SEVERITY_ICONS = {
     Severity.PASS: "✓",
@@ -58,93 +58,160 @@ SEVERITY_ICONS = {
 
 async def run_all_checks(command: str, skip_ai: bool = False) -> AnalysisReport:
     report = AnalysisReport(command=command)
-    
-    report.checks.extend(check_help_flags(command))
-    report.checks.extend(check_version_flag(command))
-    report.checks.extend(check_exit_codes(command))
-    report.checks.extend(check_no_color(command))
-    report.checks.extend(check_json_output(command))
-    report.checks.extend(check_stderr_usage(command))
-    report.checks.extend(check_double_dash(command))
-    report.checks.extend(check_help_content(command))
-    report.checks.extend(check_subcommand_help(command))
-    report.checks.extend(check_quiet_flag(command))
-    report.checks.extend(check_verbose_flag(command))
-    report.checks.extend(check_command_naming(command))
-    report.checks.extend(check_flag_conventions(command))
-    report.checks.extend(check_subcommand_structure(command))
-    report.checks.extend(check_description_quality(command))
-    report.checks.extend(check_error_suggestion(command))
-    report.checks.extend(check_positional_vs_flags(command))
-    report.checks.extend(check_input_flexibility(command))
-    
+
+    sync_checks = [
+        check_help_flags,
+        check_version_flag,
+        check_exit_codes,
+        check_no_color,
+        check_json_output,
+        check_stderr_usage,
+        check_double_dash,
+        check_help_content,
+        check_subcommand_help,
+        check_quiet_flag,
+        check_verbose_flag,
+        check_command_naming,
+        check_flag_conventions,
+        check_subcommand_structure,
+        check_description_quality,
+        check_error_suggestion,
+        check_positional_vs_flags,
+        check_input_flexibility,
+    ]
+
+    sync_results = await asyncio.gather(
+        *[asyncio.to_thread(check, command) for check in sync_checks]
+    )
+    for results in sync_results:
+        report.checks.extend(results)
+
     if not skip_ai:
-        help_output = run_command([command, "--help"])
+        help_output = await asyncio.to_thread(run_command, [command, "--help"])
         help_text = help_output.stdout or help_output.stderr
-        if help_text:
-            report.checks.extend(await check_help_quality(command, help_text))
-            report.checks.extend(await check_cli_structure(command, help_text))
         
-        error_output = run_command([command, "--this-flag-should-not-exist-xyz"])
+        error_output = await asyncio.to_thread(
+            run_command, [command, "--this-flag-should-not-exist-xyz"]
+        )
+
+        ai_tasks = []
+        if help_text:
+            ai_tasks.append(check_help_quality(command, help_text))
+            ai_tasks.append(check_cli_structure(command, help_text))
         if error_output.stderr:
-            report.checks.extend(await check_error_quality(command, error_output.stderr))
-    
+            ai_tasks.append(check_error_quality(command, error_output.stderr))
+
+        if ai_tasks:
+            ai_results = await asyncio.gather(*ai_tasks)
+            for results in ai_results:
+                report.checks.extend(results)
+
     return report
 
 
-def display_report(report: AnalysisReport, verbose: bool = False) -> None:
-    table = Table(title=f"Analysis: {report.command}", show_header=True)
-    table.add_column("Check", style="cyan")
-    table.add_column("Status", justify="center")
-    table.add_column("Message")
-    
+def display_report(
+    report: AnalysisReport, verbose: bool = False, table: bool = False
+) -> None:
+    errors = [c for c in report.checks if c.severity == Severity.ERROR]
+    warnings = [c for c in report.checks if c.severity == Severity.WARNING]
+    suggestions = [c for c in report.checks if c.severity == Severity.INFO]
+    passed = [c for c in report.checks if c.severity == Severity.PASS]
+
+    if table:
+        display_table(report, verbose)
+        return
+
+    if not errors and not warnings:
+        console.print(f"[green]✓[/green] {report.command}: All checks passed")
+        if verbose and suggestions:
+            console.print()
+            for s in suggestions:
+                console.print(f"  [blue]ℹ[/blue] {s.message}")
+        return
+
+    for check in errors:
+        console.print(f"[red]✗[/red] {report.command}:{check.name}: {check.message}")
+        if check.guideline_url:
+            console.print(f"  [dim]{check.guideline_url}[/dim]")
+
+    for check in warnings:
+        console.print(
+            f"[yellow]⚠[/yellow] {report.command}:{check.name}: {check.message}"
+        )
+        if check.guideline_url:
+            console.print(f"  [dim]{check.guideline_url}[/dim]")
+
+    if verbose:
+        for s in suggestions:
+            console.print(f"[blue]ℹ[/blue] {report.command}:{s.name}: {s.message}")
+        if passed:
+            console.print(f"\n[green]✓ {len(passed)} checks passed[/green]")
+
+    console.print(f"\n{report.errors} errors, {report.warnings} warnings")
+
+
+def display_table(report: AnalysisReport, verbose: bool = False) -> None:
+    tbl = Table(title=f"Analysis: {report.command}", show_header=True)
+    tbl.add_column("Check", style="cyan")
+    tbl.add_column("Status", justify="center")
+    tbl.add_column("Message")
+
     for check in report.checks:
+        if not verbose and check.severity == Severity.PASS:
+            continue
+        if not verbose and check.severity == Severity.INFO:
+            continue
+
         icon = SEVERITY_ICONS[check.severity]
-        color = SEVERITY_COLORS[check.severity]
+        color = {"PASS": "green", "INFO": "blue", "WARNING": "yellow", "ERROR": "red"}[
+            check.severity.name
+        ]
         status = f"[{color}]{icon}[/{color}]"
-        
+
         message = check.message
-        if verbose and check.details:
-            message += f"\n[dim]{check.details}[/dim]"
-        
         if check.severity in (Severity.WARNING, Severity.ERROR) and check.guideline_url:
             message += f"\n[dim]→ {check.guideline_url}[/dim]"
-        
-        table.add_row(check.name, status, message)
-    
-    console.print(table)
-    
-    summary_parts = [
-        f"[green]{report.passed} passed[/green]",
-        f"[yellow]{report.warnings} warnings[/yellow]",
-        f"[red]{report.errors} errors[/red]",
-    ]
-    console.print(f"\nSummary: {', '.join(summary_parts)}")
-    
-    if report.errors > 0:
-        console.print("\n[dim]See https://clig.dev for full guidelines[/dim]")
+
+        tbl.add_row(check.name, status, message)
+
+    console.print(tbl)
+    console.print(f"\n{report.errors} errors, {report.warnings} warnings")
+
+
+@app.callback()
+def main(
+    version: Annotated[bool, typer.Option("--version", "-V", callback=version_callback, is_eager=True, help="Show version")] = False,
+) -> None:
+    pass
 
 
 @app.command()
 def analyze(
     command: Annotated[str, typer.Argument(help="CLI command to analyze")],
-    verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Show detailed output")] = False,
-    skip_ai: Annotated[bool, typer.Option("--skip-ai", help="Skip AI-powered analysis")] = False,
+    verbose: Annotated[
+        bool, typer.Option("--verbose", "-v", help="Show suggestions and passed checks")
+    ] = False,
+    skip_ai: Annotated[
+        bool, typer.Option("--skip-ai", help="Skip AI-powered analysis")
+    ] = False,
     json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
+    table: Annotated[
+        bool, typer.Option("--table", "-t", help="Display as table")
+    ] = False,
 ) -> None:
     """Analyze a CLI command against clig.dev guidelines."""
     if not command_exists(command):
-        console_err.print(f"[red]Command not found: {command}[/red]")
+        console_err.print(f"[red]error:[/red] command not found: {command}")
         raise typer.Exit(1)
-    
-    with console.status(f"[bold blue]Analyzing {command}...[/bold blue]"):
+
+    with console.status(f"[dim]Analyzing {command}...[/dim]"):
         report = asyncio.run(run_all_checks(command, skip_ai=skip_ai))
-    
+
     if json_output:
         console.print(report.model_dump_json(indent=2))
     else:
-        display_report(report, verbose=verbose)
-    
+        display_report(report, verbose=verbose, table=table)
+
     if report.errors > 0:
         raise typer.Exit(1)
 
@@ -175,85 +242,61 @@ def check(
         "positional": check_positional_vs_flags,
         "input": check_input_flexibility,
     }
-    
+
     if check_name not in check_map:
-        console_err.print(f"[red]Unknown check: {check_name}[/red]")
-        console.print(f"Available: {', '.join(check_map.keys())}")
+        console_err.print(f"[red]error:[/red] unknown check: {check_name}")
+        console.print(f"available: {', '.join(check_map.keys())}")
         raise typer.Exit(1)
-    
+
     if not command_exists(command):
-        console_err.print(f"[red]Command not found: {command}[/red]")
+        console_err.print(f"[red]error:[/red] command not found: {command}")
         raise typer.Exit(1)
-    
+
     results = check_map[check_name](command)
     for result in results:
         icon = SEVERITY_ICONS[result.severity]
-        color = SEVERITY_COLORS[result.severity]
-        console.print(f"[{color}]{icon} {result.name}[/{color}]: {result.message}")
-        if result.severity in (Severity.WARNING, Severity.ERROR) and result.guideline_url:
-            console.print(f"  [dim]→ {result.guideline_url}[/dim]")
+        color = {"PASS": "green", "INFO": "blue", "WARNING": "yellow", "ERROR": "red"}[
+            result.severity.name
+        ]
+        console.print(
+            f"[{color}]{icon}[/{color}] {command}:{result.name}: {result.message}"
+        )
+        if (
+            result.severity in (Severity.WARNING, Severity.ERROR)
+            and result.guideline_url
+        ):
+            console.print(f"  [dim]{result.guideline_url}[/dim]")
 
 
 @app.command()
 def list_checks() -> None:
     """List all available checks."""
     checks = [
-        ("help", "Verify -h and --help flags work"),
-        ("version", "Verify --version flag works"),
-        ("exit-codes", "Check exit codes (0 success, non-0 failure)"),
-        ("no-color", "Check NO_COLOR env var is respected"),
-        ("json", "Check for JSON output support (--json)"),
-        ("stderr", "Verify errors go to stderr"),
-        ("double-dash", "Check -- ends option parsing (POSIX)"),
-        ("help-content", "Check help includes usage and examples"),
-        ("help-subcommand", "Check for 'help' subcommand (git-style)"),
-        ("quiet", "Check for -q/--quiet flag"),
-        ("verbose", "Check for -v/--verbose or -d/--debug flag"),
-        ("naming", "Check command name (lowercase, short, no delimiters)"),
-        ("flags", "Check flag naming conventions and short/long forms"),
-        ("subcommands", "Analyze subcommand discoverability and help"),
-        ("description", "Check if CLI has clear purpose description"),
-        ("suggestions", "Check if typos trigger helpful suggestions"),
-        ("positional", "Check positional args vs flags balance"),
-        ("input", "Check input flexibility (env vars, flag syntax)"),
-        ("help-quality", "AI: Boolean checks for help completeness + suggestions"),
-        ("error-quality", "AI: Boolean checks for error helpfulness + suggestions"),
-        ("cli-structure", "AI: 10 boolean checks for design quality + suggestions"),
+        ("help", "clig.dev", "-h and --help flags"),
+        ("version", "clig.dev", "--version flag"),
+        ("exit-codes", "clig.dev", "exit codes (0 success, non-0 failure)"),
+        ("no-color", "no-color.org", "NO_COLOR env var"),
+        ("json", "12-factor", "--json output"),
+        ("stderr", "clig.dev", "errors to stderr"),
+        ("double-dash", "POSIX", "-- ends option parsing"),
+        ("help-content", "clig.dev", "help has usage and examples"),
+        ("help-subcommand", "clig.dev", "'help' subcommand"),
+        ("quiet", "clig.dev", "-q/--quiet flag"),
+        ("verbose", "clig.dev", "-v/--verbose flag"),
+        ("naming", "clig.dev", "command name conventions"),
+        ("flags", "GNU/POSIX", "flag naming and short/long forms"),
+        ("subcommands", "clig.dev", "subcommand discoverability"),
+        ("description", "clig.dev", "clear purpose description"),
+        ("suggestions", "clig.dev", "typo suggestions"),
+        ("positional", "clig.dev", "positional args vs flags"),
+        ("input", "12-factor", "env var config, flag syntax"),
+        ("help-quality", "AI", "help text completeness"),
+        ("error-quality", "AI", "error message helpfulness"),
+        ("cli-structure", "AI", "overall design quality"),
     ]
-    
-    table = Table(title="Available Checks")
-    table.add_column("Name", style="cyan")
-    table.add_column("Description")
-    table.add_column("Source", style="dim")
-    
-    sources = {
-        "help": "clig.dev",
-        "version": "clig.dev",
-        "exit-codes": "clig.dev",
-        "no-color": "no-color.org",
-        "json": "12-factor CLI",
-        "stderr": "clig.dev",
-        "double-dash": "POSIX",
-        "help-content": "clig.dev",
-        "help-subcommand": "clig.dev",
-        "quiet": "clig.dev",
-        "verbose": "clig.dev",
-        "naming": "clig.dev",
-        "flags": "GNU/POSIX",
-        "subcommands": "clig.dev",
-        "description": "clig.dev",
-        "suggestions": "clig.dev",
-        "positional": "clig.dev",
-        "input": "12-factor CLI",
-        "help-quality": "AI",
-        "error-quality": "AI",
-        "cli-structure": "AI",
-    }
-    
-    for name, desc in checks:
-        table.add_row(name, desc, sources.get(name, ""))
-    
-    console.print(table)
+
+    for name, source, desc in checks:
+        console.print(f"  [cyan]{name:17}[/cyan] [dim]{source:12}[/dim] {desc}")
 
 
 if __name__ == "__main__":
