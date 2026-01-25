@@ -1,0 +1,90 @@
+default_language_version:
+  python: python313
+
+default_stages: [pre-commit]
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: check-yaml
+        args: [--unsafe]
+      - id: check-json
+      - id: check-toml
+      - id: check-xml
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: check-symlinks
+      - id: destroyed-symlinks
+      - id: check-ast
+      - id: check-docstring-first
+      - id: debug-statements
+      - id: name-tests-test
+        args: [--pytest-test-first]
+        exclude: ^tests/((__init__|conftest)\.py|.*/_mock_packages/.*|.*/pytest_.*_mock\.py)$
+      - id: detect-private-key
+      - id: check-added-large-files
+        args: [--maxkb=1000]
+  - repo: local
+    hooks:
+      - id: ruff-format
+        name: ruff-format
+        entry: uv run ruff format
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
+      - id: ruff
+        name: ruff
+        entry: uv run ruff check --fix --exit-non-zero-on-fix
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
+  - repo: local
+    hooks:
+      - id: basedpyright
+        name: basedpyright
+        entry: uv run basedpyright taxonomy_ontology_accelerator/
+        language: system
+        types: [python]
+        files: ^taxonomy_ontology_accelerator/
+        pass_filenames: false
+        require_serial: true
+  - repo: local
+    hooks:
+      - id: vulture
+        name: vulture
+        entry: uv run vulture taxonomy_ontology_accelerator/ vulture_whitelist.py --min-confidence 80
+        language: system
+        types: [python]
+        files: ^taxonomy_ontology_accelerator/
+        pass_filenames: false
+        require_serial: true
+  - repo: local
+    hooks:
+      - id: bandit
+        name: bandit
+        entry: uv run bandit -c pyproject.toml -r taxonomy_ontology_accelerator/
+        language: system
+        files: ^taxonomy_ontology_accelerator/
+        exclude: ^tests/
+        pass_filenames: false
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.43.0
+    hooks:
+      - id: markdownlint
+        args: [--fix, --disable, MD013, MD024, MD033, MD040, MD041, --]
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v4.1.0
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]
+  - repo: https://github.com/benomahony/nasa-lsp
+    rev: v0.1.6
+    hooks:
+      - id: nasa-lsp
+        exclude: ^tests/

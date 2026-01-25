@@ -4,6 +4,8 @@ version = "0.1.0"
 description = "Analyze CLI tools against clig.dev guidelines"
 requires-python = ">=3.12"
 dependencies = [
+    "dead>=2.1.0",
+    "nasa-lsp>=0.1.6",
     "pydantic-ai>=1.47.0",
     "rich>=14.2.0",
     "typer>=0.21.1",

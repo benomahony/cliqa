@@ -5,7 +5,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from .models import AnalysisReport, Severity
+from .models import AnalysisReport, CheckResult, Severity
 from .runner import run_command, command_exists
 from .checks import (
     check_help_flags,
@@ -26,6 +26,7 @@ from .checks import (
     check_error_suggestion,
     check_positional_vs_flags,
     check_input_flexibility,
+    check_negative_flags,
     check_help_quality,
     check_error_quality,
     check_cli_structure,
@@ -42,9 +43,12 @@ app = typer.Typer(
 def version_callback(value: bool) -> None:
     if value:
         from importlib.metadata import version
+
         console = Console()
         console.print(f"clint {version('clint')}")
         raise typer.Exit()
+
+
 console = Console()
 console_err = Console(stderr=True)
 
@@ -56,7 +60,7 @@ SEVERITY_ICONS = {
 }
 
 
-async def run_all_checks(command: str, skip_ai: bool = False) -> AnalysisReport:
+async def run_all_checks(command: str, ai: bool = False) -> AnalysisReport:
     report = AnalysisReport(command=command)
 
     sync_checks = [
@@ -78,6 +82,7 @@ async def run_all_checks(command: str, skip_ai: bool = False) -> AnalysisReport:
         check_error_suggestion,
         check_positional_vs_flags,
         check_input_flexibility,
+        check_negative_flags,
     ]
 
     sync_results = await asyncio.gather(
@@ -86,10 +91,10 @@ async def run_all_checks(command: str, skip_ai: bool = False) -> AnalysisReport:
     for results in sync_results:
         report.checks.extend(results)
 
-    if not skip_ai:
+    if ai:
         help_output = await asyncio.to_thread(run_command, [command, "--help"])
         help_text = help_output.stdout or help_output.stderr
-        
+
         error_output = await asyncio.to_thread(
             run_command, [command, "--this-flag-should-not-exist-xyz"]
         )
@@ -130,24 +135,39 @@ def display_report(
         return
 
     for check in errors:
-        console.print(f"[red]✗[/red] {report.command}:{check.name}: {check.message}")
-        if check.guideline_url:
-            console.print(f"  [dim]{check.guideline_url}[/dim]")
+        _print_check(report.command, check, "red", "✗")
 
     for check in warnings:
-        console.print(
-            f"[yellow]⚠[/yellow] {report.command}:{check.name}: {check.message}"
-        )
-        if check.guideline_url:
-            console.print(f"  [dim]{check.guideline_url}[/dim]")
+        _print_check(report.command, check, "yellow", "⚠")
 
     if verbose:
         for s in suggestions:
-            console.print(f"[blue]ℹ[/blue] {report.command}:{s.name}: {s.message}")
+            console.print(f"  [blue]ℹ[/blue] {s.message}")
         if passed:
             console.print(f"\n[green]✓ {len(passed)} checks passed[/green]")
 
     console.print(f"\n{report.errors} errors, {report.warnings} warnings")
+
+
+def _print_check(command: str, check: CheckResult, color: str, icon: str) -> None:
+    msg = check.message
+    suggestion = None
+
+    if ": " in msg and len(msg) > 80:
+        parts = msg.split(": ", 1)
+        if len(parts) == 2 and len(parts[1]) > 20:
+            msg = parts[0]
+            suggestion = parts[1]
+
+    anchor = ""
+    if check.guideline_url and "#" in check.guideline_url:
+        anchor = check.guideline_url.split("#")[1]
+        anchor = f" [dim][{anchor}][/dim]"
+
+    console.print(f"[{color}]{icon}[/{color}] {check.name}: {msg}{anchor}")
+
+    if suggestion:
+        console.print(f"  [dim]→ {suggestion}[/dim]")
 
 
 def display_table(report: AnalysisReport, verbose: bool = False) -> None:
@@ -180,7 +200,16 @@ def display_table(report: AnalysisReport, verbose: bool = False) -> None:
 
 @app.callback()
 def main(
-    version: Annotated[bool, typer.Option("--version", "-V", callback=version_callback, is_eager=True, help="Show version")] = False,
+    version: Annotated[
+        bool,
+        typer.Option(
+            "--version",
+            "-V",
+            callback=version_callback,
+            is_eager=True,
+            help="Show version",
+        ),
+    ] = False,
 ) -> None:
     pass
 
@@ -191,9 +220,7 @@ def analyze(
     verbose: Annotated[
         bool, typer.Option("--verbose", "-v", help="Show suggestions and passed checks")
     ] = False,
-    skip_ai: Annotated[
-        bool, typer.Option("--skip-ai", help="Skip AI-powered analysis")
-    ] = False,
+    ai: Annotated[bool, typer.Option("--ai", help="Run AI-powered analysis")] = False,
     json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
     table: Annotated[
         bool, typer.Option("--table", "-t", help="Display as table")
@@ -205,7 +232,7 @@ def analyze(
         raise typer.Exit(1)
 
     with console.status(f"[dim]Analyzing {command}...[/dim]"):
-        report = asyncio.run(run_all_checks(command, skip_ai=skip_ai))
+        report = asyncio.run(run_all_checks(command, ai=ai))
 
     if json_output:
         console.print(report.model_dump_json(indent=2))
@@ -241,6 +268,7 @@ def check(
         "suggestions": check_error_suggestion,
         "positional": check_positional_vs_flags,
         "input": check_input_flexibility,
+        "defaults": check_negative_flags,
     }
 
     if check_name not in check_map:
@@ -290,6 +318,7 @@ def list_checks() -> None:
         ("suggestions", "clig.dev", "typo suggestions"),
         ("positional", "clig.dev", "positional args vs flags"),
         ("input", "12-factor", "env var config, flag syntax"),
+        ("defaults", "clig.dev", "negative flags suggest wrong defaults"),
         ("help-quality", "AI", "help text completeness"),
         ("error-quality", "AI", "error message helpfulness"),
         ("cli-structure", "AI", "overall design quality"),

@@ -3,6 +3,7 @@
 CLI linter - analyze CLI tools against best practice guidelines.
 
 Synthesizes recommendations from:
+
 - [clig.dev](https://clig.dev) - Command Line Interface Guidelines
 - [POSIX Utility Conventions](https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap12.html)
 - [12 Factor CLI Apps](https://medium.com/@jdxcode/12-factor-cli-apps-dd3c227a0e46) - Jeff Dickey
@@ -38,6 +39,7 @@ uv run clint list-checks
 ## Checks
 
 ### Surface-Level Checks
+
 | Check | Description | Source |
 |-------|-------------|--------|
 | help | -h and --help flags work | clig.dev |
@@ -51,6 +53,7 @@ uv run clint list-checks
 | verbose | -v/--verbose flag | clig.dev |
 
 ### Deep Structural Checks
+
 | Check | Description | Source |
 |-------|-------------|--------|
 | naming | Command name lowercase, short, no delimiters | clig.dev |
@@ -62,6 +65,7 @@ uv run clint list-checks
 | input | Env var config, flag syntax documented | 12-factor CLI |
 
 ### AI-Powered Analysis (requires ANTHROPIC_API_KEY)
+
 | Check | What it checks |
 |-------|----------------|
 | help-quality | has_description, has_examples, has_usage, flag_descriptions, next_steps |
