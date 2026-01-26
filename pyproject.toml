@@ -1,5 +1,5 @@
 [project]
-name = "clinter"
+name = "cliqa"
 version = "0.1.0"
 description = "Analyze CLI tools against clig.dev guidelines"
 readme = "README.md"
@@ -32,9 +32,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/benomahony/clinter"
-Repository = "https://github.com/benomahony/clinter"
-Issues = "https://github.com/benomahony/clinter/issues"
+Homepage = "https://github.com/benomahony/cliqa"
+Repository = "https://github.com/benomahony/cliqa"
+Issues = "https://github.com/benomahony/cliqa/issues"
 
 [project.optional-dependencies]
 test = [

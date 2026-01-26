@@ -1,13 +1,13 @@
-# clinter
+# cliqa
 
 Analyze CLI tools against [clig.dev](https://clig.dev) guidelines.
 
 ## Installation
 
 ```bash
-uv tool install clinter
+uv tool install cliqa
 # or
-pip install clinter
+pip install cliqa
 ```
 
 ## Usage
