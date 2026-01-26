@@ -2,7 +2,24 @@
 name = "clint"
 version = "0.1.0"
 description = "Analyze CLI tools against clig.dev guidelines"
+readme = "README.md"
 requires-python = ">=3.12"
+license = {text = "MIT"}
+authors = [
+    {name = "Ben O'Mahony", email = "benomahony@users.noreply.github.com"}
+]
+keywords = ["cli", "command-line", "linter", "guidelines", "clig", "analysis"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: Software Development :: Testing",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Environment :: Console",
+]
 dependencies = [
     "bandit>=1.9.3",
     "basedpyright>=1.37.2",
@@ -13,6 +30,11 @@ dependencies = [
     "typer>=0.21.1",
     "vulture>=2.14",
 ]
+
+[project.urls]
+Homepage = "https://github.com/benomahony/clint"
+Repository = "https://github.com/benomahony/clint"
+Issues = "https://github.com/benomahony/clint/issues"
 
 [project.optional-dependencies]
 test = [
