@@ -21,14 +21,9 @@ classifiers = [
     "Environment :: Console",
 ]
 dependencies = [
-    "bandit>=1.9.3",
-    "basedpyright>=1.37.2",
-    "dead>=2.1.0",
-    "nasa-lsp>=0.1.6",
     "pydantic-ai>=1.47.0",
     "rich>=14.2.0",
     "typer>=0.21.1",
-    "vulture>=2.14",
 ]
 
 [project.urls]
@@ -91,4 +86,15 @@ exclude_lines = [
     "if __name__ == .__main__.:",
     "if TYPE_CHECKING:",
     "@abstractmethod",
+]
+
+[dependency-groups]
+dev = [
+    "bandit>=1.9.3",
+    "basedpyright>=1.37.2",
+    "dead>=2.1.0",
+    "nasa-lsp>=0.1.6",
+    "pre-commit>=4.0.0",
+    "ruff>=0.14.14",
+    "vulture>=2.14",
 ]
