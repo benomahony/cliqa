@@ -1,6 +1,6 @@
 [project]
 name = "cliqa"
-version = "0.1.3"
+version = "0.1.4"
 description = "Analyze CLI tools against clig.dev guidelines"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -89,7 +89,7 @@ exclude_lines = [
 ]
 
 [tool.bumpversion]
-current_version = "0.1.3"
+current_version = "0.1.4"
 parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)"
 serialize = ["{major}.{minor}.{patch}"]
 search = "{current_version}"
