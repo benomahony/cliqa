@@ -1,6 +1,6 @@
 """Tests for helper functions in checks module."""
 
-from clint.checks import (
+from cliqa.checks import (
     _check_command_length,
     _check_command_lowercase,
     _check_flag_naming_conventions,
@@ -8,7 +8,7 @@ from clint.checks import (
     _check_subcommand_discovery,
     _detect_subcommands,
 )
-from clint.models import Severity
+from cliqa.models import Severity
 
 
 def test_check_flag_short_long_versions_no_short():

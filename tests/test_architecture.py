@@ -49,10 +49,10 @@ def test_no_mocking_in_tests():
 
 def test_all_functions_have_assertions():
     """Verify NASA05 compliance - all functions have assertions."""
-    assert Path("src/clint").exists(), "src/clint directory must exist"
-    assert isinstance(Path("src/clint"), Path), "src/clint must be a Path object"
+    assert Path("src/cliqa").exists(), "src/cliqa directory must exist"
+    assert isinstance(Path("src/cliqa"), Path), "src/cliqa must be a Path object"
 
-    src_files = list(Path("src/clint").rglob("*.py"))
+    src_files = list(Path("src/cliqa").rglob("*.py"))
     violations = []
 
     for src_file in src_files:

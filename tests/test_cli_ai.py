@@ -3,8 +3,8 @@
 import asyncio
 import os
 import pytest
-from clint.cli import run_all_checks
-from clint.models import AnalysisReport
+from cliqa.cli import run_all_checks
+from cliqa.models import AnalysisReport
 
 
 @pytest.mark.skipif(

@@ -1,6 +1,6 @@
 """Tests for models module."""
 
-from clint.models import AnalysisReport, CheckResult, CLIOutput, Severity
+from cliqa.models import AnalysisReport, CheckResult, CLIOutput, Severity
 
 
 def test_severity_enum():

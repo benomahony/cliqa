@@ -1,8 +1,8 @@
 """Tests for runner module using real command execution."""
 
 import os
-from clint.runner import command_exists, run_command
-from clint.models import CLIOutput
+from cliqa.runner import command_exists, run_command
+from cliqa.models import CLIOutput
 
 
 def test_run_command_with_echo():

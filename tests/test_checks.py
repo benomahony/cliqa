@@ -2,7 +2,7 @@
 
 import os
 import pytest
-from clint.checks import (
+from cliqa.checks import (
     check_command_naming,
     check_description_quality,
     check_double_dash,
@@ -29,7 +29,7 @@ from clint.checks import (
     check_cli_structure,
     check_error_quality,
 )
-from clint.models import CheckResult, Severity
+from cliqa.models import CheckResult, Severity
 
 
 def test_parse_help_text_basic():

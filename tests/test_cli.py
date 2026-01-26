@@ -1,8 +1,8 @@
 """Tests for CLI interface."""
 
 from typer.testing import CliRunner
-from clint.cli import app
-from clint.models import AnalysisReport, CheckResult, Severity
+from cliqa.cli import app
+from cliqa.models import AnalysisReport, CheckResult, Severity
 
 runner = CliRunner()
 
@@ -156,7 +156,7 @@ def test_list_checks_command():
 
 def test_display_report_with_errors():
     """Test display_report function with errors."""
-    from clint.cli import display_report
+    from cliqa.cli import display_report
 
     assert display_report is not None, "display_report must be defined"
     assert AnalysisReport is not None, "AnalysisReport must be defined"
@@ -176,7 +176,7 @@ def test_display_report_with_errors():
 
 def test_display_report_with_warnings():
     """Test display_report function with warnings."""
-    from clint.cli import display_report
+    from cliqa.cli import display_report
 
     assert display_report is not None, "display_report must be defined"
     assert AnalysisReport is not None, "AnalysisReport must be defined"
@@ -196,7 +196,7 @@ def test_display_report_with_warnings():
 
 def test_display_report_all_passed():
     """Test display_report with all passed checks."""
-    from clint.cli import display_report
+    from cliqa.cli import display_report
 
     assert display_report is not None, "display_report must be defined"
     assert AnalysisReport is not None, "AnalysisReport must be defined"
@@ -216,7 +216,7 @@ def test_display_report_all_passed():
 
 def test_display_report_verbose():
     """Test display_report with verbose flag."""
-    from clint.cli import display_report
+    from cliqa.cli import display_report
 
     assert display_report is not None, "display_report must be defined"
     assert AnalysisReport is not None, "AnalysisReport must be defined"
@@ -236,7 +236,7 @@ def test_display_report_verbose():
 
 def test_display_table():
     """Test display_table function."""
-    from clint.cli import display_table
+    from cliqa.cli import display_table
 
     assert display_table is not None, "display_table must be defined"
     assert AnalysisReport is not None, "AnalysisReport must be defined"
@@ -256,7 +256,7 @@ def test_display_table():
 
 def test_display_table_verbose():
     """Test display_table with verbose flag."""
-    from clint.cli import display_table
+    from cliqa.cli import display_table
 
     assert display_table is not None, "display_table must be defined"
     assert AnalysisReport is not None, "AnalysisReport must be defined"
@@ -278,7 +278,7 @@ def test_display_table_verbose():
 def test_run_all_checks_basic():
     """Test run_all_checks function."""
     import asyncio
-    from clint.cli import run_all_checks
+    from cliqa.cli import run_all_checks
 
     assert run_all_checks is not None, "run_all_checks must be defined"
     assert isinstance("echo", str), "command must be string"
@@ -303,7 +303,7 @@ def test_analyze_json_output():
 
 def test_severity_icons():
     """Test SEVERITY_ICONS constant."""
-    from clint.cli import SEVERITY_ICONS
+    from cliqa.cli import SEVERITY_ICONS
 
     assert SEVERITY_ICONS is not None, "SEVERITY_ICONS must be defined"
     assert isinstance(SEVERITY_ICONS, dict)
@@ -316,7 +316,7 @@ def test_severity_icons():
 
 def test_print_check_function():
     """Test _print_check function."""
-    from clint.cli import _print_check
+    from cliqa.cli import _print_check
 
     assert _print_check is not None, "_print_check must be defined"
     assert CheckResult is not None, "CheckResult must be defined"
@@ -334,7 +334,7 @@ def test_print_check_function():
 
 def test_print_check_with_long_message():
     """Test _print_check with long message."""
-    from clint.cli import _print_check
+    from cliqa.cli import _print_check
 
     assert _print_check is not None, "_print_check must be defined"
     assert CheckResult is not None, "CheckResult must be defined"

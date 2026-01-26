@@ -15,22 +15,22 @@ pip install cliqa
 Analyze any CLI command:
 
 ```bash
-clint analyze ls
-clint analyze git
-clint analyze your-cli-tool
+cliqa analyze ls
+cliqa analyze git
+cliqa analyze your-cli-tool
 ```
 
 Run specific checks:
 
 ```bash
-clint check ls help
-clint check git version
+cliqa check ls help
+cliqa check git version
 ```
 
 List all available checks:
 
 ```bash
-clint list-checks
+cliqa list-checks
 ```
 
 ## Features
