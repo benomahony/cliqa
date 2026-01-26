@@ -1,13 +1,13 @@
-# clint
+# clinter
 
 Analyze CLI tools against [clig.dev](https://clig.dev) guidelines.
 
 ## Installation
 
 ```bash
-uv tool install clint
+uv tool install clinter
 # or
-pip install clint
+pip install clinter
 ```
 
 ## Usage
