@@ -47,7 +47,7 @@ Add to your `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/benomahony/cliqa
-    rev: v0.1.1
+    rev: v0.1.4
     hooks:
       - id: cliqa
         args: [your-cli-tool]

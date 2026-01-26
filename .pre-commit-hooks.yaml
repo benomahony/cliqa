@@ -1,7 +1,7 @@
 - id: cliqa
   name: cliqa
   description: Analyze CLI tools against clig.dev guidelines
-  entry: clint analyze
+  entry: cliqa analyze
   language: python
   pass_filenames: false
   require_serial: true
