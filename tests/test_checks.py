@@ -1,6 +1,7 @@
 """Tests for checks module using real CLI commands."""
 
-import asyncio
+import os
+import pytest
 from clint.checks import (
     check_command_naming,
     check_description_quality,
@@ -236,7 +237,9 @@ def test_check_stdin_dash_with_cat():
 
 def test_check_description_quality_with_python():
     """Test check_description_quality with python command."""
-    assert check_description_quality is not None, "check_description_quality must be defined"
+    assert check_description_quality is not None, (
+        "check_description_quality must be defined"
+    )
     assert isinstance("python3", str), "command must be string"
 
     results = check_description_quality("python3")
@@ -258,7 +261,9 @@ def test_check_flag_conventions_with_ls():
 
 def test_check_subcommand_structure_with_git():
     """Test check_subcommand_structure with git command."""
-    assert check_subcommand_structure is not None, "check_subcommand_structure must be defined"
+    assert check_subcommand_structure is not None, (
+        "check_subcommand_structure must be defined"
+    )
     assert isinstance("git", str), "command must be string"
 
     results = check_subcommand_structure("git")
@@ -280,7 +285,9 @@ def test_check_error_suggestion_with_ls():
 
 def test_check_positional_vs_flags_with_echo():
     """Test check_positional_vs_flags with echo command."""
-    assert check_positional_vs_flags is not None, "check_positional_vs_flags must be defined"
+    assert check_positional_vs_flags is not None, (
+        "check_positional_vs_flags must be defined"
+    )
     assert isinstance("echo", str), "command must be string"
 
     results = check_positional_vs_flags("echo")
@@ -358,7 +365,9 @@ def test_check_verbose_flag_with_ls():
 
 def test_check_input_flexibility_with_echo():
     """Test check_input_flexibility with echo command."""
-    assert check_input_flexibility is not None, "check_input_flexibility must be defined"
+    assert check_input_flexibility is not None, (
+        "check_input_flexibility must be defined"
+    )
     assert isinstance("echo", str), "command must be string"
 
     results = check_input_flexibility("echo")
@@ -376,6 +385,10 @@ def test_check_negative_flags_with_ls():
     assert isinstance(results, list)
 
 
+@pytest.mark.skipif(
+    not os.environ.get("ANTHROPIC_API_KEY"),
+    reason="Requires ANTHROPIC_API_KEY environment variable",
+)
 def test_get_cli_analyzer():
     """Test get_cli_analyzer returns Agent."""
     assert get_cli_analyzer is not None, "get_cli_analyzer must be defined"
@@ -386,6 +399,10 @@ def test_get_cli_analyzer():
     assert hasattr(analyzer, "run")
 
 
+@pytest.mark.skipif(
+    not os.environ.get("ANTHROPIC_API_KEY"),
+    reason="Requires ANTHROPIC_API_KEY environment variable",
+)
 def test_get_error_analyzer():
     """Test get_error_analyzer returns Agent."""
     assert get_error_analyzer is not None, "get_error_analyzer must be defined"
@@ -396,6 +413,10 @@ def test_get_error_analyzer():
     assert hasattr(analyzer, "run")
 
 
+@pytest.mark.skipif(
+    not os.environ.get("ANTHROPIC_API_KEY"),
+    reason="Requires ANTHROPIC_API_KEY environment variable",
+)
 async def test_check_cli_structure_with_help_text():
     """Test check_cli_structure with sample help text."""
     assert check_cli_structure is not None, "check_cli_structure must be defined"
@@ -431,6 +452,10 @@ async def test_check_cli_structure_short_text():
     assert len(results) == 0
 
 
+@pytest.mark.skipif(
+    not os.environ.get("ANTHROPIC_API_KEY"),
+    reason="Requires ANTHROPIC_API_KEY environment variable",
+)
 async def test_check_error_quality_with_error_text():
     """Test check_error_quality with sample error text."""
     assert check_error_quality is not None, "check_error_quality must be defined"

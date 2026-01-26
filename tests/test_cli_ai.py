@@ -1,10 +1,16 @@
 """Tests for CLI AI functionality."""
 
 import asyncio
+import os
+import pytest
 from clint.cli import run_all_checks
 from clint.models import AnalysisReport
 
 
+@pytest.mark.skipif(
+    not os.environ.get("ANTHROPIC_API_KEY"),
+    reason="Requires ANTHROPIC_API_KEY environment variable",
+)
 async def test_run_all_checks_with_ai():
     """Test run_all_checks with AI enabled."""
     assert run_all_checks is not None, "run_all_checks must be defined"

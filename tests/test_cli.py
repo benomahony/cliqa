@@ -15,7 +15,7 @@ def test_cli_help():
     result = runner.invoke(app, ["--help"])
 
     assert result.exit_code == 0
-    assert "Analyze CLI tools" in result.stdout or "clint" in result.stdout
+    assert "Analyze CLI tools" in result.stdout or "cliqa" in result.stdout
 
 
 def test_cli_version():
@@ -26,7 +26,7 @@ def test_cli_version():
     result = runner.invoke(app, ["--version"])
 
     assert result.exit_code == 0
-    assert "clint" in result.stdout
+    assert "cliqa" in result.stdout
 
 
 def test_analyze_command_help():

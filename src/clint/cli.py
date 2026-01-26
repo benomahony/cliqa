@@ -33,7 +33,7 @@ from .checks import (
 )
 
 app = typer.Typer(
-    name="clint",
+    name="cliqa",
     help="Analyze CLI tools against clig.dev guidelines",
     no_args_is_help=True,
     context_settings={"help_option_names": ["-h", "--help"]},
@@ -48,7 +48,7 @@ def version_callback(value: bool) -> None:
         from importlib.metadata import version
 
         console = Console()
-        console.print(f"clint {version('clint')}")
+        console.print(f"cliqa {version('cliqa')}")
         raise typer.Exit()
 
 
