@@ -31,12 +31,21 @@ class AnalysisReport(BaseModel):
 
     @property
     def passed(self) -> int:
+        assert self.checks is not None, "checks must not be None"
+        assert isinstance(self.checks, list), "checks must be a list"
+
         return sum(1 for c in self.checks if c.severity == Severity.PASS)
 
     @property
     def warnings(self) -> int:
+        assert self.checks is not None, "checks must not be None"
+        assert isinstance(self.checks, list), "checks must be a list"
+
         return sum(1 for c in self.checks if c.severity == Severity.WARNING)
 
     @property
     def errors(self) -> int:
+        assert self.checks is not None, "checks must not be None"
+        assert isinstance(self.checks, list), "checks must be a list"
+
         return sum(1 for c in self.checks if c.severity == Severity.ERROR)

@@ -44,6 +44,9 @@ STANDARD_FLAGS = {
 
 def parse_help_text(help_text: str) -> dict:
     """Extract structured info from help text."""
+    assert help_text is not None, "help_text must not be None"
+    assert isinstance(help_text, str), "help_text must be a string"
+
     result = {
         "flags": [],
         "subcommands": [],
@@ -79,40 +82,34 @@ def parse_help_text(help_text: str) -> dict:
     return result
 
 
-def check_flag_conventions(command: str) -> list[CheckResult]:
-    """Check if flags follow standard naming conventions."""
-    output = run_command([command, "--help"])
-    help_text = output.stdout or output.stderr
-    if not help_text:
-        return []
-
-    results = []
-    parsed = parse_help_text(help_text)
-    flags = parsed["flags"]
-
-    short_flags = [f for f in flags if f.startswith("-") and not f.startswith("--")]
-    long_flags = [f for f in flags if f.startswith("--")]
+def _check_flag_short_long_versions(
+    short_flags: list[str], long_flags: list[str]
+) -> CheckResult | None:
+    assert short_flags is not None, "short_flags must not be None"
+    assert long_flags is not None, "long_flags must not be None"
 
     if long_flags and not short_flags:
-        results.append(
-            CheckResult(
-                name="flag_short_versions",
-                description="Common flags have short versions",
-                severity=Severity.WARNING,
-                message="No short flags detected - consider adding -h, -v, etc.",
-                guideline_url=f"{GUIDELINES_URL}/#arguments-and-flags",
-            )
+        return CheckResult(
+            name="flag_short_versions",
+            description="Common flags have short versions",
+            severity=Severity.WARNING,
+            message="No short flags detected - consider adding -h, -v, etc.",
+            guideline_url=f"{GUIDELINES_URL}/#arguments-and-flags",
         )
     elif short_flags and long_flags:
-        results.append(
-            CheckResult(
-                name="flag_short_versions",
-                description="Common flags have short versions",
-                severity=Severity.PASS,
-                message=f"Has both short ({len(short_flags)}) and long ({len(long_flags)}) flags",
-                guideline_url=f"{GUIDELINES_URL}/#arguments-and-flags",
-            )
+        return CheckResult(
+            name="flag_short_versions",
+            description="Common flags have short versions",
+            severity=Severity.PASS,
+            message=f"Has both short ({len(short_flags)}) and long ({len(long_flags)}) flags",
+            guideline_url=f"{GUIDELINES_URL}/#arguments-and-flags",
         )
+    return None
+
+
+def _check_flag_naming_conventions(flags: list[str]) -> CheckResult:
+    assert flags is not None, "flags must not be None"
+    assert isinstance(flags, list), "flags must be a list"
 
     nonstandard = []
     for flag in flags:
@@ -128,31 +125,27 @@ def check_flag_conventions(command: str) -> list[CheckResult]:
                 nonstandard.append(f"{flag} (use lowercase)")
 
     if nonstandard:
-        results.append(
-            CheckResult(
-                name="flag_naming",
-                description="Flags follow naming conventions",
-                severity=Severity.WARNING,
-                message=f"Non-standard flag names: {', '.join(nonstandard[:3])}",
-                guideline_url=f"{GUIDELINES_URL}/#arguments-and-flags",
-            )
+        return CheckResult(
+            name="flag_naming",
+            description="Flags follow naming conventions",
+            severity=Severity.WARNING,
+            message=f"Non-standard flag names: {', '.join(nonstandard[:3])}",
+            guideline_url=f"{GUIDELINES_URL}/#arguments-and-flags",
         )
-    else:
-        results.append(
-            CheckResult(
-                name="flag_naming",
-                description="Flags follow naming conventions",
-                severity=Severity.PASS,
-                message="Flag names follow conventions (lowercase, kebab-case)",
-                guideline_url=f"{GUIDELINES_URL}/#arguments-and-flags",
-            )
-        )
-
-    return results
+    return CheckResult(
+        name="flag_naming",
+        description="Flags follow naming conventions",
+        severity=Severity.PASS,
+        message="Flag names follow conventions (lowercase, kebab-case)",
+        guideline_url=f"{GUIDELINES_URL}/#arguments-and-flags",
+    )
 
 
-def check_subcommand_structure(command: str) -> list[CheckResult]:
-    """Check subcommand organization and discoverability."""
+def check_flag_conventions(command: str) -> list[CheckResult]:
+    """Check if flags follow standard naming conventions."""
+    assert command is not None, "command must not be None"
+    assert isinstance(command, str), "command must be a string"
+
     output = run_command([command, "--help"])
     help_text = output.stdout or output.stderr
     if not help_text:
@@ -160,46 +153,81 @@ def check_subcommand_structure(command: str) -> list[CheckResult]:
 
     results = []
     parsed = parse_help_text(help_text)
+    flags = parsed["flags"]
 
+    short_flags = [f for f in flags if f.startswith("-") and not f.startswith("--")]
+    long_flags = [f for f in flags if f.startswith("--")]
+
+    short_long_result = _check_flag_short_long_versions(short_flags, long_flags)
+    if short_long_result:
+        results.append(short_long_result)
+
+    results.append(_check_flag_naming_conventions(flags))
+    return results
+
+
+def _detect_subcommands(command: str) -> list[str]:
+    assert command is not None, "command must not be None"
+    assert isinstance(command, str), "command must be a string"
+
+    test_cmds = ["list", "help", "version", "status", "info", "get", "create", "delete"]
+    detected = []
+    for cmd in test_cmds:
+        output = run_command([command, cmd, "--help"], timeout=2.0)
+        if output.exit_code == 0 and len(output.stdout or output.stderr) > 20:
+            detected.append(cmd)
+    return detected
+
+
+def _check_subcommand_discovery(
+    detected: list[str], has_section: bool
+) -> CheckResult | None:
+    assert detected is not None, "detected must not be None"
+    assert isinstance(has_section, bool), "has_section must be a boolean"
+
+    if detected and not has_section:
+        return CheckResult(
+            name="subcommand_discovery",
+            description="Subcommands are discoverable in help",
+            severity=Severity.WARNING,
+            message=f"Has subcommands ({', '.join(detected)}) but help doesn't list them clearly",
+            guideline_url=f"{GUIDELINES_URL}/#subcommands",
+        )
+    elif has_section:
+        return CheckResult(
+            name="subcommand_discovery",
+            description="Subcommands are discoverable in help",
+            severity=Severity.PASS,
+            message="Help text lists available commands/subcommands",
+            guideline_url=f"{GUIDELINES_URL}/#subcommands",
+        )
+    return None
+
+
+def check_subcommand_structure(command: str) -> list[CheckResult]:
+    """Check subcommand organization and discoverability."""
+    assert command is not None, "command must not be None"
+    assert isinstance(command, str), "command must be a string"
+
+    output = run_command([command, "--help"])
+    help_text = output.stdout or output.stderr
+    if not help_text:
+        return []
+
+    results = []
     has_subcommand_section = bool(
         re.search(
             r"(commands?|subcommands?|available|actions?):", help_text, re.IGNORECASE
         )
     )
 
-    test_cmds = ["list", "help", "version", "status", "info", "get", "create", "delete"]
-    detected_subcommands = []
-    for cmd in test_cmds:
-        test_output = run_command([command, cmd, "--help"], timeout=2.0)
-        if (
-            test_output.exit_code == 0
-            and len(test_output.stdout or test_output.stderr) > 20
-        ):
-            detected_subcommands.append(cmd)
+    detected = _detect_subcommands(command)
+    discovery_result = _check_subcommand_discovery(detected, has_subcommand_section)
+    if discovery_result:
+        results.append(discovery_result)
 
-    if detected_subcommands and not has_subcommand_section:
-        results.append(
-            CheckResult(
-                name="subcommand_discovery",
-                description="Subcommands are discoverable in help",
-                severity=Severity.WARNING,
-                message=f"Has subcommands ({', '.join(detected_subcommands)}) but help doesn't list them clearly",
-                guideline_url=f"{GUIDELINES_URL}/#subcommands",
-            )
-        )
-    elif has_subcommand_section:
-        results.append(
-            CheckResult(
-                name="subcommand_discovery",
-                description="Subcommands are discoverable in help",
-                severity=Severity.PASS,
-                message="Help text lists available commands/subcommands",
-                guideline_url=f"{GUIDELINES_URL}/#subcommands",
-            )
-        )
-
-    if detected_subcommands:
-        for subcmd in detected_subcommands[:2]:
+    if detected:
+        for subcmd in detected[:2]:
             subcmd_help = run_command([command, subcmd, "--help"])
             if subcmd_help.exit_code == 0:
                 results.append(
@@ -218,6 +246,9 @@ def check_subcommand_structure(command: str) -> list[CheckResult]:
 
 def check_description_quality(command: str) -> list[CheckResult]:
     """Check if the CLI has a clear, concise description."""
+    assert command is not None, "command must not be None"
+    assert isinstance(command, str), "command must be a string"
+
     output = run_command([command, "--help"])
     help_text = output.stdout or output.stderr
     if not help_text:
@@ -273,6 +304,9 @@ def check_description_quality(command: str) -> list[CheckResult]:
 
 def check_error_suggestion(command: str) -> list[CheckResult]:
     """Check if errors suggest corrections or help."""
+    assert command is not None, "command must not be None"
+    assert isinstance(command, str), "command must be a string"
+
     output = run_command([command, "--halp"])
     error_text = output.stderr or output.stdout
 
@@ -316,6 +350,9 @@ def check_error_suggestion(command: str) -> list[CheckResult]:
 
 def check_positional_vs_flags(command: str) -> list[CheckResult]:
     """Check if the CLI prefers flags over ambiguous positional args."""
+    assert command is not None, "command must not be None"
+    assert isinstance(command, str), "command must be a string"
+
     output = run_command([command, "--help"])
     help_text = output.stdout or output.stderr
     if not help_text:
@@ -352,6 +389,9 @@ def check_positional_vs_flags(command: str) -> list[CheckResult]:
 
 
 def check_help_flags(command: str) -> list[CheckResult]:
+    assert command is not None, "command must not be None"
+    assert isinstance(command, str), "command must be a string"
+
     results = []
 
     for flag in ["-h", "--help"]:
@@ -394,6 +434,9 @@ def check_help_flags(command: str) -> list[CheckResult]:
 
 
 def check_version_flag(command: str) -> list[CheckResult]:
+    assert command is not None, "command must not be None"
+    assert isinstance(command, str), "command must be a string"
+
     output = run_command([command, "--version"])
     if output.exit_code == 0 and output.stdout:
         return [
@@ -418,6 +461,9 @@ def check_version_flag(command: str) -> list[CheckResult]:
 
 
 def check_exit_codes(command: str) -> list[CheckResult]:
+    assert command is not None, "command must not be None"
+    assert isinstance(command, str), "command must be a string"
+
     results = []
 
     help_output = run_command([command, "--help"])
@@ -468,6 +514,9 @@ def check_exit_codes(command: str) -> list[CheckResult]:
 
 
 def check_no_color(command: str) -> list[CheckResult]:
+    assert command is not None, "command must not be None"
+    assert isinstance(command, str), "command must be a string"
+
     env_with_no_color = os.environ.copy()
     env_with_no_color["NO_COLOR"] = "1"
 
@@ -512,6 +561,9 @@ def check_no_color(command: str) -> list[CheckResult]:
 
 
 def check_json_output(command: str) -> list[CheckResult]:
+    assert command is not None, "command must not be None"
+    assert isinstance(command, str), "command must be a string"
+
     for flag in ["--json", "-j", "--format=json", "--output=json"]:
         output = run_command([command, flag])
         if output.exit_code == 0:
@@ -537,6 +589,9 @@ def check_json_output(command: str) -> list[CheckResult]:
 
 
 def check_stderr_usage(command: str) -> list[CheckResult]:
+    assert command is not None, "command must not be None"
+    assert isinstance(command, str), "command must be a string"
+
     bad_args_output = run_command([command, "--this-flag-should-not-exist-xyz"])
 
     if bad_args_output.stderr and not bad_args_output.stdout:
@@ -572,6 +627,9 @@ def check_stderr_usage(command: str) -> list[CheckResult]:
 
 
 def check_double_dash(command: str) -> list[CheckResult]:
+    assert command is not None, "command must not be None"
+    assert isinstance(command, str), "command must be a string"
+
     output = run_command([command, "--", "--help"])
     help_output = run_command([command, "--help"])
 
@@ -598,6 +656,9 @@ def check_double_dash(command: str) -> list[CheckResult]:
 
 
 def check_stdin_dash(command: str) -> list[CheckResult]:
+    assert command is not None, "command must not be None"
+    assert isinstance(command, str), "command must be a string"
+
     output = run_command([command, "-"], stdin="test input")
 
     if output.exit_code == 0 or "stdin" in output.stderr.lower():
@@ -623,6 +684,9 @@ def check_stdin_dash(command: str) -> list[CheckResult]:
 
 
 def check_help_content(command: str) -> list[CheckResult]:
+    assert command is not None, "command must not be None"
+    assert isinstance(command, str), "command must be a string"
+
     output = run_command([command, "--help"])
     help_text = output.stdout or output.stderr
     results = []
@@ -678,6 +742,9 @@ def check_help_content(command: str) -> list[CheckResult]:
 
 
 def check_subcommand_help(command: str) -> list[CheckResult]:
+    assert command is not None, "command must not be None"
+    assert isinstance(command, str), "command must be a string"
+
     output = run_command([command, "help"])
 
     if output.exit_code == 0 and len(output.stdout or output.stderr) > 50:
@@ -703,6 +770,9 @@ def check_subcommand_help(command: str) -> list[CheckResult]:
 
 
 def check_quiet_flag(command: str) -> list[CheckResult]:
+    assert command is not None, "command must not be None"
+    assert isinstance(command, str), "command must be a string"
+
     for flag in ["-q", "--quiet", "--silent"]:
         output = run_command([command, flag, "--help"])
         if output.exit_code == 0:
@@ -728,6 +798,9 @@ def check_quiet_flag(command: str) -> list[CheckResult]:
 
 
 def check_verbose_flag(command: str) -> list[CheckResult]:
+    assert command is not None, "command must not be None"
+    assert isinstance(command, str), "command must be a string"
+
     for flag in ["-v", "--verbose", "-d", "--debug"]:
         help_output = run_command([command, "--help"])
         help_text = help_output.stdout or help_output.stderr
@@ -753,60 +826,62 @@ def check_verbose_flag(command: str) -> list[CheckResult]:
     ]
 
 
-def check_command_naming(command: str) -> list[CheckResult]:
-    results = []
+def _check_command_lowercase(command: str) -> CheckResult:
+    assert command is not None, "command must not be None"
+    assert isinstance(command, str), "command must be a string"
 
     if not command.islower():
-        results.append(
-            CheckResult(
-                name="command_lowercase",
-                description="Command name is lowercase",
-                severity=Severity.WARNING,
-                message=f"Command '{command}' should be lowercase",
-                guideline_url=f"{GUIDELINES_URL}/#naming",
-            )
+        return CheckResult(
+            name="command_lowercase",
+            description="Command name is lowercase",
+            severity=Severity.WARNING,
+            message=f"Command '{command}' should be lowercase",
+            guideline_url=f"{GUIDELINES_URL}/#naming",
         )
-    else:
-        results.append(
-            CheckResult(
-                name="command_lowercase",
-                description="Command name is lowercase",
-                severity=Severity.PASS,
-                message="Command name is lowercase",
-                guideline_url=f"{GUIDELINES_URL}/#naming",
-            )
-        )
+    return CheckResult(
+        name="command_lowercase",
+        description="Command name is lowercase",
+        severity=Severity.PASS,
+        message="Command name is lowercase",
+        guideline_url=f"{GUIDELINES_URL}/#naming",
+    )
 
-    if len(command) > 14:
-        results.append(
-            CheckResult(
-                name="command_length",
-                description="Command name is reasonably short",
-                severity=Severity.WARNING,
-                message=f"Command name '{command}' is long ({len(command)} chars) - harder to type",
-                guideline_url=f"{GUIDELINES_URL}/#naming",
-            )
+
+def _check_command_length(command: str) -> CheckResult:
+    assert command is not None, "command must not be None"
+    assert isinstance(command, str), "command must be a string"
+
+    cmd_len = len(command)
+    if cmd_len > 14:
+        return CheckResult(
+            name="command_length",
+            description="Command name is reasonably short",
+            severity=Severity.WARNING,
+            message=f"Command name '{command}' is long ({cmd_len} chars) - harder to type",
+            guideline_url=f"{GUIDELINES_URL}/#naming",
         )
-    elif len(command) <= 6:
-        results.append(
-            CheckResult(
-                name="command_length",
-                description="Command name is reasonably short",
-                severity=Severity.PASS,
-                message=f"Command name is short and easy to type ({len(command)} chars)",
-                guideline_url=f"{GUIDELINES_URL}/#naming",
-            )
+    elif cmd_len <= 6:
+        return CheckResult(
+            name="command_length",
+            description="Command name is reasonably short",
+            severity=Severity.PASS,
+            message=f"Command name is short and easy to type ({cmd_len} chars)",
+            guideline_url=f"{GUIDELINES_URL}/#naming",
         )
-    else:
-        results.append(
-            CheckResult(
-                name="command_length",
-                description="Command name is reasonably short",
-                severity=Severity.PASS,
-                message=f"Command name length is acceptable ({len(command)} chars)",
-                guideline_url=f"{GUIDELINES_URL}/#naming",
-            )
-        )
+    return CheckResult(
+        name="command_length",
+        description="Command name is reasonably short",
+        severity=Severity.PASS,
+        message=f"Command name length is acceptable ({cmd_len} chars)",
+        guideline_url=f"{GUIDELINES_URL}/#naming",
+    )
+
+
+def check_command_naming(command: str) -> list[CheckResult]:
+    assert command is not None, "command must not be None"
+    assert isinstance(command, str), "command must be a string"
+
+    results = [_check_command_lowercase(command), _check_command_length(command)]
 
     if "-" in command or "_" in command:
         results.append(
@@ -823,6 +898,9 @@ def check_command_naming(command: str) -> list[CheckResult]:
 
 
 def check_input_flexibility(command: str) -> list[CheckResult]:
+    assert command is not None, "command must not be None"
+    assert isinstance(command, str), "command must be a string"
+
     results = []
     help_output = run_command([command, "--help"])
     help_text = help_output.stdout or help_output.stderr
@@ -863,6 +941,9 @@ def check_input_flexibility(command: str) -> list[CheckResult]:
 
 def check_negative_flags(command: str) -> list[CheckResult]:
     """Check for negative flags that suggest wrong defaults."""
+    assert command is not None, "command must not be None"
+    assert isinstance(command, str), "command must be a string"
+
     help_output = run_command([command, "--help"])
     help_text = help_output.stdout or help_output.stderr
 
@@ -928,11 +1009,7 @@ class CLIAnalysis(BaseModel):
     issues: list[UsabilityIssue] = Field(description="All usability issues found")
 
 
-def get_cli_analyzer() -> Agent[None, CLIAnalysis]:
-    return Agent(
-        "anthropic:claude-sonnet-4-20250514",
-        output_type=CLIAnalysis,
-        instructions="""You are a CLI usability expert analyzing against clig.dev philosophy.
+CLI_ANALYZER_INSTRUCTIONS = """You are a CLI usability expert analyzing against clig.dev philosophy.
 
 ## PHILOSOPHY TO EVALUATE AGAINST
 
@@ -984,12 +1061,25 @@ For each issue:
 - suggestion: ACTIONABLE fix ("Rename to 'remove' or 'delete'" not "improve naming")
 - guideline: help, errors, arguments-and-flags, subcommands, output, or naming
 
-Don't invent problems. If the CLI is well-designed, return few or no issues.""",
+Don't invent problems. If the CLI is well-designed, return few or no issues."""
+
+
+def get_cli_analyzer() -> Agent[None, CLIAnalysis]:
+    assert Agent is not None, "Agent class must be available"
+    assert CLIAnalysis is not None, "CLIAnalysis must be defined"
+
+    return Agent(
+        "anthropic:claude-sonnet-4-20250514",
+        output_type=CLIAnalysis,
+        instructions=CLI_ANALYZER_INSTRUCTIONS,
     )
 
 
 async def check_cli_structure(command: str, help_text: str) -> list[CheckResult]:
     """Holistic AI analysis of CLI usability."""
+    assert command is not None, "command must not be None"
+    assert help_text is not None, "help_text must not be None"
+
     if not help_text or len(help_text) < 50:
         return []
 
@@ -1050,6 +1140,9 @@ class ErrorAnalysis(BaseModel):
 
 
 def get_error_analyzer() -> Agent[None, ErrorAnalysis]:
+    assert Agent is not None, "Agent class must be available"
+    assert ErrorAnalysis is not None, "ErrorAnalysis must be defined"
+
     return Agent(
         "anthropic:claude-sonnet-4-20250514",
         output_type=ErrorAnalysis,
@@ -1068,6 +1161,9 @@ If the error message is good, return no issues.""",
 
 async def check_error_quality(command: str, error_text: str) -> list[CheckResult]:
     """AI analysis of error message quality."""
+    assert command is not None, "command must not be None"
+    assert error_text is not None, "error_text must not be None"
+
     if not error_text or len(error_text) < 10:
         return []
 
@@ -1105,4 +1201,7 @@ async def check_error_quality(command: str, error_text: str) -> list[CheckResult
 
 async def check_help_quality(command: str, help_text: str) -> list[CheckResult]:
     """Placeholder - merged into check_cli_structure."""
+    assert command is not None, "command must not be None"
+    assert help_text is not None, "help_text must not be None"
+
     return []

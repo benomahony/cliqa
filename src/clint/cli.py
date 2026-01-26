@@ -41,6 +41,9 @@ app = typer.Typer(
 
 
 def version_callback(value: bool) -> None:
+    assert value is not None, "value must not be None"
+    assert isinstance(value, bool), "value must be a boolean"
+
     if value:
         from importlib.metadata import version
 
@@ -61,6 +64,9 @@ SEVERITY_ICONS = {
 
 
 async def run_all_checks(command: str, ai: bool = False) -> AnalysisReport:
+    assert command is not None, "command must not be None"
+    assert isinstance(command, str), "command must be a string"
+
     report = AnalysisReport(command=command)
 
     sync_checks = [
@@ -117,6 +123,9 @@ async def run_all_checks(command: str, ai: bool = False) -> AnalysisReport:
 def display_report(
     report: AnalysisReport, verbose: bool = False, table: bool = False
 ) -> None:
+    assert report is not None, "report must not be None"
+    assert isinstance(report, AnalysisReport), "report must be an AnalysisReport"
+
     errors = [c for c in report.checks if c.severity == Severity.ERROR]
     warnings = [c for c in report.checks if c.severity == Severity.WARNING]
     suggestions = [c for c in report.checks if c.severity == Severity.INFO]
@@ -150,6 +159,9 @@ def display_report(
 
 
 def _print_check(command: str, check: CheckResult, color: str, icon: str) -> None:
+    assert command is not None, "command must not be None"
+    assert check is not None, "check must not be None"
+
     msg = check.message
     suggestion = None
 
@@ -171,6 +183,9 @@ def _print_check(command: str, check: CheckResult, color: str, icon: str) -> Non
 
 
 def display_table(report: AnalysisReport, verbose: bool = False) -> None:
+    assert report is not None, "report must not be None"
+    assert isinstance(report, AnalysisReport), "report must be an AnalysisReport"
+
     tbl = Table(title=f"Analysis: {report.command}", show_header=True)
     tbl.add_column("Check", style="cyan")
     tbl.add_column("Status", justify="center")
@@ -211,6 +226,9 @@ def main(
         ),
     ] = False,
 ) -> None:
+    assert version is not None, "version must not be None"
+    assert isinstance(version, bool), "version must be a boolean"
+
     pass
 
 
@@ -227,6 +245,9 @@ def analyze(
     ] = False,
 ) -> None:
     """Analyze a CLI command against clig.dev guidelines."""
+    assert command is not None, "command must not be None"
+    assert isinstance(command, str), "command must be a string"
+
     if not command_exists(command):
         console_err.print(f"[red]error:[/red] command not found: {command}")
         raise typer.Exit(1)
@@ -249,6 +270,9 @@ def check(
     check_name: Annotated[str, typer.Argument(help="Specific check to run")],
 ) -> None:
     """Run a specific check against a CLI command."""
+    assert command is not None, "command must not be None"
+    assert check_name is not None, "check_name must not be None"
+
     check_map = {
         "help": check_help_flags,
         "version": check_version_flag,
@@ -299,6 +323,9 @@ def check(
 @app.command()
 def list_checks() -> None:
     """List all available checks."""
+    assert console is not None, "console must be initialized"
+    assert app is not None, "app must be initialized"
+
     checks = [
         ("help", "clig.dev", "-h and --help flags"),
         ("version", "clig.dev", "--version flag"),

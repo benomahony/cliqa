@@ -4,11 +4,14 @@ version = "0.1.0"
 description = "Analyze CLI tools against clig.dev guidelines"
 requires-python = ">=3.12"
 dependencies = [
+    "bandit>=1.9.3",
+    "basedpyright>=1.37.2",
     "dead>=2.1.0",
     "nasa-lsp>=0.1.6",
     "pydantic-ai>=1.47.0",
     "rich>=14.2.0",
     "typer>=0.21.1",
+    "vulture>=2.14",
 ]
 
 [project.scripts]
@@ -17,3 +20,22 @@ clint = "clint.cli:app"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.basedpyright]
+include = ["src/clint"]
+pythonVersion = "3.12"
+typeCheckingMode = "standard"
+reportMissingTypeStubs = false
+reportUnknownParameterType = false
+reportUnknownArgumentType = false
+reportUnknownMemberType = false
+reportUnknownVariableType = false
+
+[tool.vulture]
+min_confidence = 80
+paths = ["src/clint"]
+ignore_names = ["app", "console*", "GUIDELINES_URL", "STANDARD_FLAGS", "CLI_ANALYZER_INSTRUCTIONS"]
+
+[tool.bandit]
+exclude_dirs = ["tests"]
+skips = ["B101", "B105", "B404", "B603"]

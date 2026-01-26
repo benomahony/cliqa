@@ -48,31 +48,29 @@ repos:
     hooks:
       - id: basedpyright
         name: basedpyright
-        entry: uv run basedpyright taxonomy_ontology_accelerator/
+        entry: uv run basedpyright
         language: system
         types: [python]
-        files: ^taxonomy_ontology_accelerator/
         pass_filenames: false
         require_serial: true
   - repo: local
     hooks:
       - id: vulture
         name: vulture
-        entry: uv run vulture taxonomy_ontology_accelerator/ vulture_whitelist.py --min-confidence 80
+        entry: uv run vulture
         language: system
         types: [python]
-        files: ^taxonomy_ontology_accelerator/
         pass_filenames: false
         require_serial: true
   - repo: local
     hooks:
       - id: bandit
         name: bandit
-        entry: uv run bandit -c pyproject.toml -r taxonomy_ontology_accelerator/
+        entry: uv run bandit -c pyproject.toml -r src/clint/
         language: system
-        files: ^taxonomy_ontology_accelerator/
-        exclude: ^tests/
+        types: [python]
         pass_filenames: false
+        require_serial: true
   - repo: https://github.com/igorshubovych/markdownlint-cli
     rev: v0.43.0
     hooks:

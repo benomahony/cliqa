@@ -8,8 +8,10 @@ def run_command(
     timeout: float = 5.0,
     env: dict[str, str] | None = None,
     stdin: str | None = None,
-    check_tty: bool = False,
 ) -> CLIOutput:
+    assert command is not None, "command must not be None"
+    assert timeout > 0, "timeout must be positive"
+
     if isinstance(command, str):
         args = shlex.split(command)
     else:
@@ -51,5 +53,8 @@ def run_command(
 
 
 def command_exists(command: str) -> bool:
+    assert command is not None, "command must not be None"
+    assert isinstance(command, str), "command must be a string"
+
     result = run_command(["which", command])
     return result.exit_code == 0
