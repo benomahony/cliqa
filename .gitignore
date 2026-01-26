@@ -19,6 +19,7 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
 
 # Virtual environments
 .venv/
@@ -40,7 +41,7 @@ htmlcov/
 *~
 
 # Local settings
-.claude/settings.local.json
+.claude/
 
 # OS
 .DS_Store
