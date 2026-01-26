@@ -40,6 +40,47 @@ clint list-checks
 - **NASA05 compliance**: Defensive assertions throughout
 - **clig.dev alignment**: Checks against modern CLI best practices
 
+## Pre-commit Hook
+
+Add to your `.pre-commit-config.yaml`:
+
+```yaml
+repos:
+  - repo: https://github.com/benomahony/cliqa
+    rev: v0.1.1
+    hooks:
+      - id: cliqa
+        args: [your-cli-tool]
+```
+
+Analyze multiple commands:
+
+```yaml
+repos:
+  - repo: https://github.com/benomahony/cliqa
+    rev: v0.1.1
+    hooks:
+      - id: cliqa
+        name: Check main CLI
+        args: [my-tool]
+      - id: cliqa
+        name: Check admin CLI
+        args: [my-admin-tool]
+```
+
+Enable AI-powered analysis:
+
+```yaml
+repos:
+  - repo: https://github.com/benomahony/cliqa
+    rev: v0.1.1
+    hooks:
+      - id: cliqa
+        args: [your-cli-tool, --ai]
+```
+
+This will analyze your CLI tool before each commit and fail if any errors are found.
+
 ## Development
 
 ```bash
