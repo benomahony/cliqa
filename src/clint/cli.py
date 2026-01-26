@@ -226,8 +226,10 @@ def main(
         ),
     ] = False,
 ) -> None:
-    assert version is not None, "version must not be None"
-    assert isinstance(version, bool), "version must be a boolean"
+    assert version is None or isinstance(version, bool), (
+        "version must be boolean or None"
+    )
+    assert app is not None, "app must be initialized"
 
     pass
 
